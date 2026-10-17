@@ -14,6 +14,7 @@ import com.example.digitallibrary.data.repository.AuthRepository
 import com.example.digitallibrary.data.repository.BookRepository
 import com.example.digitallibrary.ui.auth.LoginScreen
 import com.example.digitallibrary.ui.auth.LoginViewModel
+import com.example.digitallibrary.ui.common.LanguageManager
 import com.example.digitallibrary.ui.detail.BookDetailScreen
 import com.example.digitallibrary.ui.downloads.DownloadsScreen
 import com.example.digitallibrary.ui.library.LibraryScreen
@@ -46,6 +47,8 @@ fun AppNavigation() {
     val authRepository = AuthRepository(context)
     val bookRepository = BookRepository(context, authRepository)
 
+    LanguageManager.init(context)
+
     val navController = rememberNavController()
     val isLoggedIn by authRepository.isLoggedIn.collectAsState()
 
@@ -77,6 +80,9 @@ fun AppNavigation() {
                 viewModel = libraryViewModel,
                 onBookClick = { bookId ->
                     navController.navigate(Screen.BookDetail.createRoute(bookId))
+                },
+                onReadClick = { bookId ->
+                    navController.navigate(Screen.Reader.createRoute(bookId))
                 },
                 onSeriesClick = {
                     navController.navigate(Screen.SeriesList.route)

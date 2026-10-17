@@ -1,6 +1,7 @@
 package com.example.digitallibrary.ui.detail
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -16,30 +17,26 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AutoStories
 import androidx.compose.material.icons.filled.CalendarToday
-import androidx.compose.material.icons.filled.Description
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.DownloadDone
 import androidx.compose.material.icons.filled.Layers
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -49,17 +46,30 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.digitallibrary.data.model.Book
 import com.example.digitallibrary.data.repository.BookRepository
+import com.example.digitallibrary.ui.common.LanguageManager
+import com.example.digitallibrary.ui.common.LibraryStrings
+import com.example.digitallibrary.ui.components.BookCoverCard
+import com.example.digitallibrary.ui.components.DevotionalErrorView
+import com.example.digitallibrary.ui.components.DevotionalLoadingView
+import com.example.digitallibrary.ui.components.DevotionalTopBar
 import com.example.digitallibrary.ui.theme.FormatDocxColor
 import com.example.digitallibrary.ui.theme.FormatPdfColor
 import com.example.digitallibrary.ui.theme.FormatTxtColor
+import com.example.digitallibrary.ui.theme.MutedGold
+import com.example.digitallibrary.ui.theme.ParchmentBackground
+import com.example.digitallibrary.ui.theme.ParchmentBorder
+import com.example.digitallibrary.ui.theme.ParchmentSurface
+import com.example.digitallibrary.ui.theme.SuccessGreen
+import com.example.digitallibrary.ui.theme.TerracottaDark
+import com.example.digitallibrary.ui.theme.TerracottaPrimary
 import kotlinx.coroutines.launch
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BookDetailScreen(
     bookId: String,
@@ -67,6 +77,9 @@ fun BookDetailScreen(
     onBackClick: () -> Unit,
     onReadClick: (String) -> Unit
 ) {
+    val currentLang by LanguageManager.currentLanguage.collectAsState()
+    val strings = remember(currentLang) { LibraryStrings(currentLang) }
+
     var book by remember { mutableStateOf<Book?>(null) }
     var isLoading by remember { mutableStateOf(true) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
@@ -96,16 +109,9 @@ fun BookDetailScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text("Document Details", fontWeight = FontWeight.SemiBold) },
-                navigationIcon = {
-                    IconButton(onClick = onBackClick) {
-                        Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface
-                )
+            DevotionalTopBar(
+                title = strings.documentDetails,
+                onBackClick = onBackClick
             )
         }
     ) { innerPadding ->
@@ -113,45 +119,20 @@ fun BookDetailScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-                .background(MaterialTheme.colorScheme.background)
+                .background(ParchmentBackground)
         ) {
             when {
                 isLoading -> {
-                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
-                    }
+                    DevotionalLoadingView(message = strings.loadingBooks)
                 }
 
                 errorMessage != null -> {
-                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Card(
-                            modifier = Modifier.padding(24.dp),
-                            shape = RoundedCornerShape(16.dp),
-                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
-                        ) {
-                            Column(
-                                modifier = Modifier.padding(24.dp),
-                                horizontalAlignment = Alignment.CenterHorizontally
-                            ) {
-                                Text(
-                                    text = "Error Loading Book",
-                                    style = MaterialTheme.typography.titleMedium,
-                                    color = MaterialTheme.colorScheme.error,
-                                    fontWeight = FontWeight.Bold
-                                )
-                                Spacer(modifier = Modifier.height(8.dp))
-                                Text(
-                                    text = errorMessage ?: "",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.secondary
-                                )
-                                Spacer(modifier = Modifier.height(16.dp))
-                                Button(onClick = onBackClick) {
-                                    Text("Go Back")
-                                }
-                            }
-                        }
-                    }
+                    DevotionalErrorView(
+                        title = strings.unableToReach,
+                        errorMessage = errorMessage ?: "",
+                        onRetry = onBackClick,
+                        secondaryActionLabel = "Back"
+                    )
                 }
 
                 book != null -> {
@@ -160,103 +141,89 @@ fun BookDetailScreen(
                         currentBook.isPdf -> FormatPdfColor
                         currentBook.isDocx -> FormatDocxColor
                         currentBook.isTxt -> FormatTxtColor
-                        else -> MaterialTheme.colorScheme.primary
+                        else -> TerracottaPrimary
                     }
 
                     Column(
                         modifier = Modifier
                             .fillMaxSize()
                             .verticalScroll(rememberScrollState())
-                            .padding(20.dp)
+                            .padding(18.dp)
                     ) {
-                        // Header Card
+                        // Hero Header Card with Big Book Cover
                         Card(
                             modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(18.dp),
-                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                            shape = RoundedCornerShape(20.dp),
+                            colors = CardDefaults.cardColors(containerColor = ParchmentSurface),
+                            elevation = CardDefaults.cardElevation(defaultElevation = 3.dp),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, MutedGold.copy(alpha = 0.45f))
                         ) {
-                            Column(modifier = Modifier.padding(20.dp)) {
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    verticalAlignment = Alignment.CenterVertically
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(20.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                // Large Scripture Book Cover
+                                BookCoverCard(
+                                    title = currentBook.title,
+                                    author = currentBook.author,
+                                    fileType = currentBook.fileType,
+                                    seriesOrder = currentBook.seriesOrder,
+                                    isLarge = true,
+                                    modifier = Modifier
+                                        .width(150.dp)
+                                        .height(210.dp)
+                                )
+
+                                Spacer(modifier = Modifier.height(18.dp))
+
+                                // Format badge
+                                Box(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(6.dp))
+                                        .background(badgeColor.copy(alpha = 0.12f))
+                                        .border(0.8.dp, badgeColor.copy(alpha = 0.4f), RoundedCornerShape(6.dp))
+                                        .padding(horizontal = 10.dp, vertical = 4.dp)
                                 ) {
-                                    Box(
-                                        modifier = Modifier
-                                            .size(54.dp)
-                                            .clip(RoundedCornerShape(12.dp))
-                                            .background(badgeColor.copy(alpha = 0.15f)),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Default.Description,
-                                            contentDescription = "Format",
-                                            tint = badgeColor,
-                                            modifier = Modifier.size(30.dp)
-                                        )
-                                    }
-
-                                    Spacer(modifier = Modifier.width(14.dp))
-
-                                    Column(modifier = Modifier.weight(1f)) {
-                                        Box(
-                                            modifier = Modifier
-                                                .clip(RoundedCornerShape(6.dp))
-                                                .background(badgeColor.copy(alpha = 0.15f))
-                                                .padding(horizontal = 8.dp, vertical = 3.dp)
-                                        ) {
-                                            Text(
-                                                text = "${currentBook.fileType.uppercase()} DOCUMENT",
-                                                style = MaterialTheme.typography.labelSmall,
-                                                color = badgeColor,
-                                                fontWeight = FontWeight.Bold
-                                            )
-                                        }
-
-                                        Spacer(modifier = Modifier.height(4.dp))
-
-                                        Text(
-                                            text = currentBook.title,
-                                            style = MaterialTheme.typography.headlineMedium,
-                                            fontWeight = FontWeight.Bold
-                                        )
-                                    }
+                                    Text(
+                                        text = "${currentBook.fileType.uppercase()} DOCUMENT",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = badgeColor,
+                                        fontWeight = FontWeight.Bold,
+                                        letterSpacing = 0.5.sp
+                                    )
                                 }
 
-                                Spacer(modifier = Modifier.height(16.dp))
+                                Spacer(modifier = Modifier.height(10.dp))
 
-                                // Metadata attributes
+                                // Title
+                                Text(
+                                    text = currentBook.title,
+                                    style = MaterialTheme.typography.headlineMedium,
+                                    fontFamily = FontFamily.Serif,
+                                    fontWeight = FontWeight.Bold,
+                                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+
+                                Spacer(modifier = Modifier.height(6.dp))
+
+                                // Author
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Icon(
                                         imageVector = Icons.Default.Person,
                                         contentDescription = "Author",
-                                        tint = MaterialTheme.colorScheme.secondary,
-                                        modifier = Modifier.size(18.dp)
+                                        tint = TerracottaDark,
+                                        modifier = Modifier.size(16.dp)
                                     )
                                     Spacer(modifier = Modifier.width(6.dp))
                                     Text(
-                                        text = currentBook.author ?: "Author not specified",
+                                        text = currentBook.author ?: strings.unknownAuthor,
                                         style = MaterialTheme.typography.bodyMedium,
-                                        color = MaterialTheme.colorScheme.secondary
+                                        fontWeight = FontWeight.Medium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
-                                }
-
-                                if (!currentBook.createdAt.isNullOrBlank()) {
-                                    Spacer(modifier = Modifier.height(8.dp))
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Icon(
-                                            imageVector = Icons.Default.CalendarToday,
-                                            contentDescription = "Date",
-                                            tint = MaterialTheme.colorScheme.secondary,
-                                            modifier = Modifier.size(16.dp)
-                                        )
-                                        Spacer(modifier = Modifier.width(6.dp))
-                                        Text(
-                                            text = "Uploaded: ${currentBook.createdAt.take(10)}",
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.secondary
-                                        )
-                                    }
                                 }
 
                                 if (seriesTitle != null) {
@@ -265,15 +232,33 @@ fun BookDetailScreen(
                                         Icon(
                                             imageVector = Icons.Default.Layers,
                                             contentDescription = "Series",
-                                            tint = MaterialTheme.colorScheme.primary,
+                                            tint = TerracottaPrimary,
                                             modifier = Modifier.size(16.dp)
                                         )
                                         Spacer(modifier = Modifier.width(6.dp))
                                         Text(
-                                            text = "Part of Series: $seriesTitle (Vol. ${currentBook.seriesOrder})",
+                                            text = "$seriesTitle • ${strings.seriesVol} ${currentBook.seriesOrder}",
                                             style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.primary,
-                                            fontWeight = FontWeight.SemiBold
+                                            color = TerracottaDark,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                    }
+                                }
+
+                                if (!currentBook.createdAt.isNullOrBlank()) {
+                                    Spacer(modifier = Modifier.height(6.dp))
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Icon(
+                                            imageVector = Icons.Default.CalendarToday,
+                                            contentDescription = "Date",
+                                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                                            modifier = Modifier.size(14.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(6.dp))
+                                        Text(
+                                            text = currentBook.createdAt.take(10),
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
                                         )
                                     }
                                 }
@@ -286,53 +271,57 @@ fun BookDetailScreen(
                         Card(
                             modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(18.dp),
-                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                            elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+                            colors = CardDefaults.cardColors(containerColor = ParchmentSurface),
+                            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                            border = androidx.compose.foundation.BorderStroke(0.8.dp, ParchmentBorder)
                         ) {
                             Column(modifier = Modifier.padding(20.dp)) {
                                 Text(
-                                    text = "Description & Summary",
+                                    text = strings.descriptionAndSummary,
                                     style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = FontWeight.Bold
+                                    fontFamily = FontFamily.Serif,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurface
                                 )
 
                                 Spacer(modifier = Modifier.height(10.dp))
 
                                 Text(
-                                    text = currentBook.description?.ifBlank { "No summary or description provided for this publication." }
-                                        ?: "No summary or description provided for this publication.",
+                                    text = currentBook.description?.ifBlank { strings.noDescription }
+                                        ?: strings.noDescription,
                                     style = MaterialTheme.typography.bodyLarge,
-                                    lineHeight = 24.sp,
-                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f)
+                                    lineHeight = 26.sp,
+                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.9f)
                                 )
                             }
                         }
 
                         Spacer(modifier = Modifier.height(20.dp))
 
-                        // Download Button / Status
+                        // Download Button / Status Card
                         if (isDownloaded) {
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .clip(RoundedCornerShape(12.dp))
-                                    .background(Color(0xFFE0F2FE))
+                                    .background(SuccessGreen.copy(alpha = 0.12f))
+                                    .border(1.dp, SuccessGreen.copy(alpha = 0.4f), RoundedCornerShape(12.dp))
                                     .padding(vertical = 12.dp, horizontal = 16.dp),
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.Center
                             ) {
                                 Icon(
-                                    imageVector = Icons.Default.DownloadDone,
-                                    contentDescription = "Downloaded",
-                                    tint = Color(0xFF0284C7),
+                                    imageVector = Icons.Default.CheckCircle,
+                                    contentDescription = null,
+                                    tint = SuccessGreen,
                                     modifier = Modifier.size(20.dp)
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text(
-                                    text = "Downloaded for Offline Reading",
+                                    text = strings.downloadedOfflineReady,
                                     style = MaterialTheme.typography.bodyMedium,
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = Color(0xFF0369A1)
+                                    fontWeight = FontWeight.Bold,
+                                    color = SuccessGreen
                                 )
                             }
                         } else {
@@ -351,47 +340,61 @@ fun BookDetailScreen(
                                     .fillMaxWidth()
                                     .height(48.dp),
                                 shape = RoundedCornerShape(12.dp),
-                                enabled = !isDownloading
+                                enabled = !isDownloading,
+                                border = androidx.compose.foundation.BorderStroke(1.dp, TerracottaPrimary)
                             ) {
                                 if (isDownloading) {
-                                    CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                                    CircularProgressIndicator(
+                                        modifier = Modifier.size(18.dp),
+                                        strokeWidth = 2.dp,
+                                        color = TerracottaPrimary
+                                    )
                                     Spacer(modifier = Modifier.width(8.dp))
-                                    Text("Downloading...")
+                                    Text(strings.downloading, color = TerracottaPrimary)
                                 } else {
                                     Icon(
                                         imageVector = Icons.Default.Download,
-                                        contentDescription = "Download",
-                                        modifier = Modifier.size(18.dp)
+                                        contentDescription = null,
+                                        modifier = Modifier.size(18.dp),
+                                        tint = TerracottaPrimary
                                     )
                                     Spacer(modifier = Modifier.width(8.dp))
-                                    Text("Download for Offline Reading", fontWeight = FontWeight.SemiBold)
+                                    Text(
+                                        text = strings.downloadForOffline,
+                                        fontWeight = FontWeight.Bold,
+                                        color = TerracottaPrimary
+                                    )
                                 }
                             }
                         }
 
                         Spacer(modifier = Modifier.height(12.dp))
 
-                        // Read Button
+                        // Primary Read Button
                         Button(
                             onClick = { onReadClick(currentBook.id) },
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(54.dp),
                             shape = RoundedCornerShape(14.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+                            colors = ButtonDefaults.buttonColors(containerColor = TerracottaPrimary)
                         ) {
                             Icon(
                                 imageVector = Icons.Default.AutoStories,
-                                contentDescription = "Read",
-                                modifier = Modifier.size(20.dp)
+                                contentDescription = null,
+                                modifier = Modifier.size(22.dp),
+                                tint = Color.White
                             )
                             Spacer(modifier = Modifier.width(10.dp))
                             Text(
-                                text = if (isDownloaded) "Read Offline" else "Read Document",
+                                text = if (isDownloaded) strings.readOffline else strings.readDocument,
                                 fontSize = 16.sp,
-                                fontWeight = FontWeight.Bold
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White
                             )
                         }
+
+                        Spacer(modifier = Modifier.height(24.dp))
                     }
                 }
             }

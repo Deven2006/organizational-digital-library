@@ -1,6 +1,7 @@
 package com.example.digitallibrary.ui.series
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -17,25 +18,19 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
-import androidx.compose.material.icons.filled.Book
 import androidx.compose.material.icons.filled.Layers
 import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -44,20 +39,36 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.example.digitallibrary.data.model.Series
 import com.example.digitallibrary.data.repository.BookRepository
+import com.example.digitallibrary.ui.common.LanguageManager
+import com.example.digitallibrary.ui.common.LibraryStrings
+import com.example.digitallibrary.ui.components.DevotionalEmptyView
+import com.example.digitallibrary.ui.components.DevotionalErrorView
+import com.example.digitallibrary.ui.components.DevotionalLoadingView
+import com.example.digitallibrary.ui.components.DevotionalTopBar
+import com.example.digitallibrary.ui.theme.DeepMaroon
+import com.example.digitallibrary.ui.theme.MutedGold
+import com.example.digitallibrary.ui.theme.ParchmentBackground
+import com.example.digitallibrary.ui.theme.ParchmentBorder
+import com.example.digitallibrary.ui.theme.ParchmentSurface
+import com.example.digitallibrary.ui.theme.TerracottaPrimary
 import kotlinx.coroutines.launch
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SeriesListScreen(
     bookRepository: BookRepository,
     onBackClick: () -> Unit,
     onSeriesClick: (String) -> Unit
 ) {
+    val currentLang by LanguageManager.currentLanguage.collectAsState()
+    val strings = remember(currentLang) { LibraryStrings(currentLang) }
+
     var seriesList by remember { mutableStateOf<List<Series>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
@@ -83,34 +94,19 @@ fun SeriesListScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = {
-                    Column {
-                        Text(
-                            text = "Book Series & Collections",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Text(
-                            text = "Multi-volume and serialized publications",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
-                        )
-                    }
-                },
-                navigationIcon = {
-                    IconButton(onClick = onBackClick) {
-                        Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-                    }
-                },
+            DevotionalTopBar(
+                title = strings.seriesCollections,
+                subtitle = "Multi-volume and serialized publications",
+                onBackClick = onBackClick,
                 actions = {
                     IconButton(onClick = { loadSeries() }) {
-                        Icon(imageVector = Icons.Default.Refresh, contentDescription = "Refresh Series")
+                        Icon(
+                            imageVector = Icons.Default.Refresh,
+                            contentDescription = "Refresh",
+                            tint = TerracottaPrimary
+                        )
                     }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface
-                )
+                }
             )
         }
     ) { innerPadding ->
@@ -118,80 +114,34 @@ fun SeriesListScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-                .background(MaterialTheme.colorScheme.background)
+                .background(ParchmentBackground)
         ) {
             when {
                 isLoading && seriesList.isEmpty() -> {
-                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
-                    }
+                    DevotionalLoadingView(message = strings.loadingBooks)
                 }
 
                 errorMessage != null && seriesList.isEmpty() -> {
-                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Card(
-                            modifier = Modifier.padding(24.dp),
-                            shape = RoundedCornerShape(16.dp),
-                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
-                        ) {
-                            Column(
-                                modifier = Modifier.padding(24.dp),
-                                horizontalAlignment = Alignment.CenterHorizontally
-                            ) {
-                                Text(
-                                    text = "Unable to Load Series",
-                                    style = MaterialTheme.typography.titleMedium,
-                                    color = MaterialTheme.colorScheme.error,
-                                    fontWeight = FontWeight.Bold
-                                )
-                                Spacer(modifier = Modifier.height(8.dp))
-                                Text(
-                                    text = errorMessage ?: "",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.secondary
-                                )
-                                Spacer(modifier = Modifier.height(16.dp))
-                                Button(onClick = { loadSeries() }) {
-                                    Text("Retry")
-                                }
-                            }
-                        }
-                    }
+                    DevotionalErrorView(
+                        title = strings.unableToReach,
+                        errorMessage = errorMessage ?: "",
+                        onRetry = { loadSeries() }
+                    )
                 }
 
                 seriesList.isEmpty() -> {
-                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Layers,
-                                contentDescription = "No series",
-                                tint = MaterialTheme.colorScheme.secondary.copy(alpha = 0.4f),
-                                modifier = Modifier.size(64.dp)
-                            )
-                            Spacer(modifier = Modifier.height(14.dp))
-                            Text(
-                                text = "No Series Published",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold
-                            )
-                            Spacer(modifier = Modifier.height(6.dp))
-                            Text(
-                                text = "No serialized book collections have been published yet.",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.secondary
-                            )
-                        }
-                    }
+                    DevotionalEmptyView(
+                        title = strings.noSeriesPublished,
+                        description = strings.noSeriesDesc,
+                        icon = Icons.Default.Layers
+                    )
                 }
 
                 else -> {
                     LazyColumn(
                         modifier = Modifier
                             .fillMaxSize()
-                            .padding(horizontal = 16.dp, vertical = 8.dp),
+                            .padding(horizontal = 16.dp, vertical = 10.dp),
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         items(seriesList, key = { it.id }) { s ->
@@ -200,8 +150,9 @@ fun SeriesListScreen(
                                     .fillMaxWidth()
                                     .clickable { onSeriesClick(s.id) },
                                 shape = RoundedCornerShape(14.dp),
-                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                                colors = CardDefaults.cardColors(containerColor = ParchmentSurface),
+                                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                                border = androidx.compose.foundation.BorderStroke(0.8.dp, ParchmentBorder)
                             ) {
                                 Row(
                                     modifier = Modifier
@@ -211,45 +162,53 @@ fun SeriesListScreen(
                                 ) {
                                     Box(
                                         modifier = Modifier
-                                            .size(52.dp)
+                                            .size(54.dp)
                                             .clip(RoundedCornerShape(12.dp))
-                                            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)),
+                                            .background(TerracottaPrimary.copy(alpha = 0.12f))
+                                            .border(0.8.dp, TerracottaPrimary.copy(alpha = 0.3f), RoundedCornerShape(12.dp)),
                                         contentAlignment = Alignment.Center
                                     ) {
                                         Icon(
                                             imageVector = Icons.Default.Layers,
                                             contentDescription = "Series",
-                                            tint = MaterialTheme.colorScheme.primary,
+                                            tint = TerracottaPrimary,
                                             modifier = Modifier.size(28.dp)
                                         )
                                     }
 
-                                    Spacer(modifier = Modifier.width(14.dp))
+                                    Spacer(modifier = Modifier.width(16.dp))
 
                                     Column(modifier = Modifier.weight(1f)) {
                                         Text(
                                             text = s.title,
                                             style = MaterialTheme.typography.titleMedium,
+                                            fontFamily = FontFamily.Serif,
                                             fontWeight = FontWeight.Bold,
                                             maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis
+                                            overflow = TextOverflow.Ellipsis,
+                                            color = MaterialTheme.colorScheme.onSurface
                                         )
+
                                         Spacer(modifier = Modifier.height(4.dp))
+
                                         Text(
-                                            text = s.description ?: "Collection of serialized organizational publications.",
+                                            text = s.description?.ifBlank { "Collection of serialized organizational publications." }
+                                                ?: "Collection of serialized organizational publications.",
                                             style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.secondary,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                                             maxLines = 2,
-                                            overflow = TextOverflow.Ellipsis
+                                            overflow = TextOverflow.Ellipsis,
+                                            lineHeight = 18.sp
                                         )
                                     }
 
-                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Spacer(modifier = Modifier.width(10.dp))
 
                                     Icon(
                                         imageVector = Icons.AutoMirrored.Filled.ArrowForward,
                                         contentDescription = "View",
-                                        tint = MaterialTheme.colorScheme.secondary
+                                        tint = TerracottaPrimary.copy(alpha = 0.7f),
+                                        modifier = Modifier.size(20.dp)
                                     )
                                 }
                             }

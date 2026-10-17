@@ -11,36 +11,64 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 
-private val DarkColorScheme = darkColorScheme(
-    primary = PrimaryIndigo,
-    secondary = SecondarySlate,
-    tertiary = TertiaryAmber,
-    background = BackgroundDark,
-    surface = SurfaceDark,
-    surfaceVariant = SurfaceVariantDark,
-    outline = OutlineDark,
+private val DevotionalLightColorScheme = lightColorScheme(
+    primary = TerracottaPrimary,
     onPrimary = Color.White,
-    onBackground = Color.White,
-    onSurface = Color.White
+    primaryContainer = TerracottaContainer,
+    onPrimaryContainer = OnTerracottaContainer,
+    secondary = DeepMaroon,
+    onSecondary = Color.White,
+    secondaryContainer = MaroonContainer,
+    onSecondaryContainer = OnMaroonContainer,
+    tertiary = MutedGold,
+    onTertiary = Color.White,
+    tertiaryContainer = GoldContainer,
+    onTertiaryContainer = OnGoldContainer,
+    background = ParchmentBackground,
+    onBackground = TextDevotionalPrimary,
+    surface = ParchmentSurface,
+    onSurface = TextDevotionalPrimary,
+    surfaceVariant = ParchmentSurfaceVariant,
+    onSurfaceVariant = TextDevotionalSecondary,
+    outline = ParchmentDivider,
+    outlineVariant = ParchmentBorder,
+    error = ErrorRed,
+    onError = Color.White,
+    errorContainer = ErrorContainer,
+    onErrorContainer = ErrorRed
 )
 
-private val LightColorScheme = lightColorScheme(
-    primary = PrimaryIndigo,
-    secondary = SecondarySlate,
-    tertiary = TertiaryAmber,
-    background = BackgroundLight,
-    surface = SurfaceLight,
-    surfaceVariant = SurfaceVariantLight,
-    outline = OutlineLight,
+private val DevotionalDarkColorScheme = darkColorScheme(
+    primary = TerracottaLight,
     onPrimary = Color.White,
-    onBackground = Color(0xFF0F172A),
-    onSurface = Color(0xFF0F172A)
+    primaryContainer = TerracottaDark,
+    onPrimaryContainer = Color(0xFFFFDBCF),
+    secondary = DeepMaroonLight,
+    onSecondary = Color.White,
+    secondaryContainer = DeepMaroonDark,
+    onSecondaryContainer = Color(0xFFFFDAD4),
+    tertiary = MutedGoldLight,
+    onTertiary = Color.Black,
+    tertiaryContainer = MutedGoldDark,
+    onTertiaryContainer = Color(0xFFFFF2BF),
+    background = SanctumBackgroundDark,
+    onBackground = TextDarkDevotionalPrimary,
+    surface = SanctumSurfaceDark,
+    onSurface = TextDarkDevotionalPrimary,
+    surfaceVariant = SanctumSurfaceVariantDark,
+    onSurfaceVariant = TextDarkDevotionalSecondary,
+    outline = SanctumDividerDark,
+    outlineVariant = SanctumBorderDark,
+    error = Color(0xFFFFB4AB),
+    onError = Color(0xFF690005),
+    errorContainer = Color(0xFF93000A),
+    onErrorContainer = Color(0xFFFFDAD6)
 )
 
 @Composable
 fun DigitalLibraryTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
-    dynamicColor: Boolean = true,
+    dynamicColor: Boolean = false, // Keep false to preserve authentic devotional palette
     content: @Composable () -> Unit
 ) {
     val colorScheme = when {
@@ -48,8 +76,8 @@ fun DigitalLibraryTheme(
             val context = LocalContext.current
             if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
         }
-        darkTheme -> DarkColorScheme
-        else -> LightColorScheme
+        darkTheme -> DevotionalDarkColorScheme
+        else -> DevotionalLightColorScheme
     }
 
     MaterialTheme(

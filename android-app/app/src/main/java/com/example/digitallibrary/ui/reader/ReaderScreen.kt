@@ -1,6 +1,7 @@
 package com.example.digitallibrary.ui.reader
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -16,23 +17,18 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.OfflinePin
-import androidx.compose.material.icons.filled.Warning
-import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -42,12 +38,24 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.digitallibrary.data.model.Book
 import com.example.digitallibrary.data.repository.BookRepository
+import com.example.digitallibrary.ui.common.LanguageManager
+import com.example.digitallibrary.ui.common.LibraryStrings
+import com.example.digitallibrary.ui.components.DevotionalErrorView
+import com.example.digitallibrary.ui.components.DevotionalLoadingView
+import com.example.digitallibrary.ui.components.DevotionalTopBar
+import com.example.digitallibrary.ui.theme.MutedGold
+import com.example.digitallibrary.ui.theme.ParchmentBackground
+import com.example.digitallibrary.ui.theme.ParchmentBorder
+import com.example.digitallibrary.ui.theme.ParchmentSurface
+import com.example.digitallibrary.ui.theme.SuccessGreen
+import com.example.digitallibrary.ui.theme.TerracottaDark
+import com.example.digitallibrary.ui.theme.TerracottaPrimary
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -60,11 +68,14 @@ fun ReaderScreen(
     bookRepository: BookRepository,
     onBackClick: () -> Unit
 ) {
+    val currentLang by LanguageManager.currentLanguage.collectAsState()
+    val strings = remember(currentLang) { LibraryStrings(currentLang) }
+
     var book by remember { mutableStateOf<Book?>(null) }
     var pdfFile by remember { mutableStateOf<File?>(null) }
     var textContent by remember { mutableStateOf<String?>(null) }
     var isLoading by remember { mutableStateOf(true) }
-    var loadingStatus by remember { mutableStateOf("Loading document...") }
+    var loadingStatus by remember { mutableStateOf(strings.loadingBooks) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
     var isOfflineMode by remember { mutableStateOf(false) }
     var initialPage by remember { mutableStateOf(0) }
@@ -76,7 +87,7 @@ fun ReaderScreen(
             isLoading = true
             errorMessage = null
 
-            // 1. Check if book is stored locally in persistent offline downloads
+            // 1. Check if book is stored locally in persistent offline downloads (zero network, 100% offline)
             val localPersistentFile = bookRepository.getLocalFileForBook(bookId)
             val savedProgress = bookRepository.progressRepository.getLocalProgress(bookId)
             if (savedProgress != null) {
@@ -95,8 +106,8 @@ fun ReaderScreen(
                     }
 
                     currentBook?.isDocx == true || localPersistentFile.extension.equals("docx", ignoreCase = true) -> {
-                        if (!currentBook?.parsedContent.isNullOrBlank()) {
-                            textContent = currentBook?.parsedContent
+                        if (currentBook != null && !currentBook.parsedContent.isNullOrBlank()) {
+                            textContent = currentBook.parsedContent
                         } else {
                             withContext(Dispatchers.IO) {
                                 textContent = localPersistentFile.readText()
@@ -116,7 +127,7 @@ fun ReaderScreen(
             }
 
             // 2. Online fetch flow
-            loadingStatus = "Retrieving book details..."
+            loadingStatus = strings.loadingBooks
             val bookResult = bookRepository.getBookById(bookId)
             if (bookResult.isFailure) {
                 errorMessage = bookResult.exceptionOrNull()?.message ?: "Failed to retrieve book metadata."
@@ -195,41 +206,36 @@ fun ReaderScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = {
-                    Column {
-                        Text(
-                            text = book?.title ?: "Document Reader",
-                            fontWeight = FontWeight.SemiBold,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                        if (isOfflineMode) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(
-                                    imageVector = Icons.Default.OfflinePin,
-                                    contentDescription = "Offline",
-                                    tint = Color(0xFF10B981),
-                                    modifier = Modifier.size(14.dp)
-                                )
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text(
-                                    text = "Reading from Offline Storage",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = Color(0xFF10B981)
-                                )
-                            }
+            DevotionalTopBar(
+                title = book?.title ?: strings.readDocument,
+                subtitle = if (isOfflineMode) strings.readingFromOffline else null,
+                onBackClick = onBackClick,
+                actions = {
+                    if (isOfflineMode) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(6.dp))
+                                .background(SuccessGreen.copy(alpha = 0.12f))
+                                .padding(horizontal = 8.dp, vertical = 4.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.CheckCircle,
+                                contentDescription = "Offline Mode",
+                                tint = SuccessGreen,
+                                modifier = Modifier.size(14.dp)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                text = "Offline",
+                                color = SuccessGreen,
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold
+                            )
                         }
+                        Spacer(modifier = Modifier.width(8.dp))
                     }
-                },
-                navigationIcon = {
-                    IconButton(onClick = onBackClick) {
-                        Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface
-                )
+                }
             )
         }
     ) { innerPadding ->
@@ -237,63 +243,19 @@ fun ReaderScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-                .background(MaterialTheme.colorScheme.background)
+                .background(ParchmentBackground)
         ) {
             when {
                 isLoading -> {
-                    Column(
-                        modifier = Modifier.fillMaxSize(),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.Center
-                    ) {
-                        CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Text(
-                            text = loadingStatus,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.secondary
-                        )
-                    }
+                    DevotionalLoadingView(message = loadingStatus)
                 }
 
                 errorMessage != null -> {
-                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Card(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(24.dp),
-                            shape = RoundedCornerShape(16.dp),
-                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
-                        ) {
-                            Column(
-                                modifier = Modifier.padding(24.dp),
-                                horizontalAlignment = Alignment.CenterHorizontally
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Warning,
-                                    contentDescription = "Error",
-                                    tint = MaterialTheme.colorScheme.error,
-                                    modifier = Modifier.padding(bottom = 8.dp)
-                                )
-                                Text(
-                                    text = "Unable to Open Document",
-                                    style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.error
-                                )
-                                Spacer(modifier = Modifier.height(8.dp))
-                                Text(
-                                    text = errorMessage ?: "",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.secondary
-                                )
-                                Spacer(modifier = Modifier.height(20.dp))
-                                Button(onClick = { loadDocument() }) {
-                                    Text("Retry Loading")
-                                }
-                            }
-                        }
-                    }
+                    DevotionalErrorView(
+                        title = strings.unableToReach,
+                        errorMessage = errorMessage ?: "",
+                        onRetry = { loadDocument() }
+                    )
                 }
 
                 // Render PDF with progress tracking
@@ -322,42 +284,58 @@ fun ReaderScreen(
                         modifier = Modifier
                             .fillMaxSize()
                             .verticalScroll(rememberScrollState())
-                            .padding(horizontal = 20.dp, vertical = 24.dp)
+                            .padding(horizontal = 18.dp, vertical = 20.dp)
                     ) {
                         Card(
                             modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(12.dp),
-                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                            elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+                            shape = RoundedCornerShape(16.dp),
+                            colors = CardDefaults.cardColors(containerColor = ParchmentSurface),
+                            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, MutedGold.copy(alpha = 0.35f))
                         ) {
-                            Column(modifier = Modifier.padding(22.dp)) {
+                            Column(modifier = Modifier.padding(24.dp)) {
                                 Text(
                                     text = book?.title ?: "",
                                     style = MaterialTheme.typography.headlineMedium,
-                                    fontWeight = FontWeight.Bold
+                                    fontFamily = FontFamily.Serif,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurface
                                 )
 
                                 if (!book?.author.isNullOrBlank()) {
-                                    Spacer(modifier = Modifier.height(4.dp))
+                                    Spacer(modifier = Modifier.height(6.dp))
                                     Text(
-                                        text = "By ${book?.author}",
+                                        text = "${book?.author}",
                                         style = MaterialTheme.typography.bodyMedium,
-                                        color = MaterialTheme.colorScheme.secondary
+                                        color = TerracottaDark,
+                                        fontWeight = FontWeight.Medium
                                     )
                                 }
 
                                 Spacer(modifier = Modifier.height(18.dp))
 
+                                // Subtle gold decorative divider
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(1.dp)
+                                        .background(MutedGold.copy(alpha = 0.4f))
+                                )
+
+                                Spacer(modifier = Modifier.height(18.dp))
+
+                                // Scripture Reading Text
                                 Text(
                                     text = textContent ?: "",
                                     style = MaterialTheme.typography.bodyLarge,
-                                    lineHeight = 26.sp,
+                                    fontSize = 17.sp,
+                                    lineHeight = 28.sp,
                                     letterSpacing = 0.2.sp,
                                     color = MaterialTheme.colorScheme.onSurface
                                 )
                             }
                         }
-                        Spacer(modifier = Modifier.height(32.dp))
+                        Spacer(modifier = Modifier.height(36.dp))
                     }
                 }
             }

@@ -5,6 +5,7 @@ import android.graphics.pdf.PdfRenderer
 import android.os.ParcelFileDescriptor
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -14,6 +15,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -23,6 +25,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -34,6 +37,14 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
+import com.example.digitallibrary.ui.common.LanguageManager
+import com.example.digitallibrary.ui.common.LibraryStrings
+import com.example.digitallibrary.ui.theme.MutedGold
+import com.example.digitallibrary.ui.theme.ParchmentBackground
+import com.example.digitallibrary.ui.theme.ParchmentBorder
+import com.example.digitallibrary.ui.theme.ParchmentSurfaceVariant
+import com.example.digitallibrary.ui.theme.TerracottaDark
+import com.example.digitallibrary.ui.theme.TerracottaPrimary
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -45,6 +56,9 @@ fun PdfViewer(
     initialPage: Int = 0,
     onPageChanged: ((pageIndex: Int, totalPages: Int) -> Unit)? = null
 ) {
+    val currentLang by LanguageManager.currentLanguage.collectAsState()
+    val strings = remember(currentLang) { LibraryStrings(currentLang) }
+
     var renderer by remember { mutableStateOf<PdfRenderer?>(null) }
     var fileDescriptor by remember { mutableStateOf<ParcelFileDescriptor?>(null) }
     var pageCount by remember { mutableStateOf(0) }
@@ -81,13 +95,13 @@ fun PdfViewer(
     val currentRenderer = renderer
     if (currentRenderer == null || pageCount == 0) {
         Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+            CircularProgressIndicator(color = TerracottaPrimary)
         }
         return
     }
 
     val safeInitialPage = initialPage.coerceIn(0, (pageCount - 1).coerceAtLeast(0))
-    val listState = androidx.compose.foundation.lazy.rememberLazyListState(
+    val listState = rememberLazyListState(
         initialFirstVisibleItemIndex = safeInitialPage
     )
 
@@ -99,14 +113,15 @@ fun PdfViewer(
         state = listState,
         modifier = modifier
             .fillMaxSize()
-            .background(Color(0xFFE2E8F0))
-            .padding(vertical = 12.dp, horizontal = 10.dp)
+            .background(ParchmentSurfaceVariant)
+            .padding(vertical = 12.dp, horizontal = 12.dp)
     ) {
         items(pageCount) { pageIndex ->
             PdfPageItem(
                 renderer = currentRenderer,
                 pageIndex = pageIndex,
-                totalPages = pageCount
+                totalPages = pageCount,
+                strings = strings
             )
             Spacer(modifier = Modifier.height(14.dp))
         }
@@ -117,7 +132,8 @@ fun PdfViewer(
 private fun PdfPageItem(
     renderer: PdfRenderer,
     pageIndex: Int,
-    totalPages: Int
+    totalPages: Int,
+    strings: LibraryStrings
 ) {
     var pageBitmap by remember { mutableStateOf<Bitmap?>(null) }
 
@@ -127,11 +143,11 @@ private fun PdfPageItem(
                 // Synchronize on renderer because PdfRenderer is not thread-safe across concurrent calls
                 synchronized(renderer) {
                     val page = renderer.openPage(pageIndex)
-                    // Render at high resolution for crisp text (2x page dimensions)
+                    // Render at high resolution for crisp, legible text (2x page dimensions)
                     val width = page.width * 2
                     val height = page.height * 2
                     val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
-                    // Fill white background before rendering PDF
+                    // Fill crisp white background before rendering PDF
                     bitmap.eraseColor(android.graphics.Color.WHITE)
                     page.render(bitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
                     page.close()
@@ -146,16 +162,17 @@ private fun PdfPageItem(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(8.dp)),
+            .clip(RoundedCornerShape(10.dp)),
         elevation = CardDefaults.cardElevation(defaultElevation = 3.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White)
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        border = androidx.compose.foundation.BorderStroke(1.dp, ParchmentBorder)
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             val bitmap = pageBitmap
             if (bitmap != null) {
                 Image(
                     bitmap = bitmap.asImageBitmap(),
-                    contentDescription = "Page ${pageIndex + 1}",
+                    contentDescription = "${strings.pageCounter} ${pageIndex + 1}",
                     modifier = Modifier
                         .fillMaxWidth()
                         .aspectRatio(bitmap.width.toFloat() / bitmap.height.toFloat()),
@@ -165,26 +182,27 @@ private fun PdfPageItem(
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(300.dp)
+                        .height(320.dp)
                         .background(Color.White),
                     contentAlignment = Alignment.Center
                 ) {
-                    CircularProgressIndicator(strokeWidth = 2.dp)
+                    CircularProgressIndicator(strokeWidth = 2.dp, color = TerracottaPrimary)
                 }
             }
 
-            // Page indicator footer
+            // Warm page indicator footer
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(Color(0xFFF1F5F9))
-                    .padding(vertical = 6.dp),
+                    .background(Color(0xFFFAF7F2))
+                    .padding(vertical = 8.dp),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    text = "Page ${pageIndex + 1} of $totalPages",
+                    text = "${strings.pageCounter} ${pageIndex + 1} ${strings.ofTotal} $totalPages",
                     style = MaterialTheme.typography.labelSmall,
-                    color = Color(0xFF64748B)
+                    color = TerracottaDark,
+                    fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold
                 )
             }
         }
