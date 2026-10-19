@@ -15,9 +15,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.DownloadDone
@@ -36,18 +36,22 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.foundation.lazy.items
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.digitallibrary.ui.common.AppLanguage
@@ -137,74 +141,41 @@ fun LibraryScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-                .background(ParchmentBackground)
+                .background(MaterialTheme.colorScheme.background)
         ) {
-            // Quick Navigation Filter Chips
+            // Quick Navigation Tab Row (Responsive 3 Tabs)
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 8.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                FilterChip(
-                    selected = true,
+                // Tab 1: All Books (Active)
+                LibraryNavTab(
+                    label = strings.tabAllBooks,
+                    icon = Icons.AutoMirrored.Filled.MenuBook,
+                    isSelected = true,
                     onClick = { /* already in all catalog */ },
-                    label = { Text(strings.allBooks, fontWeight = FontWeight.SemiBold) },
-                    colors = FilterChipDefaults.filterChipColors(
-                        selectedContainerColor = TerracottaPrimary.copy(alpha = 0.15f),
-                        selectedLabelColor = TerracottaDark
-                    ),
-                    border = FilterChipDefaults.filterChipBorder(
-                        enabled = true,
-                        selected = true,
-                        borderColor = TerracottaPrimary.copy(alpha = 0.4f)
-                    )
+                    modifier = Modifier.weight(1f)
                 )
 
-                FilterChip(
-                    selected = false,
+                // Tab 2: Series
+                LibraryNavTab(
+                    label = strings.tabSeries,
+                    icon = Icons.Default.Layers,
+                    isSelected = false,
                     onClick = onSeriesClick,
-                    label = { Text(strings.seriesCollections) },
-                    leadingIcon = {
-                        Icon(
-                            imageVector = Icons.Default.Layers,
-                            contentDescription = null,
-                            modifier = Modifier.size(16.dp),
-                            tint = TerracottaPrimary
-                        )
-                    },
-                    colors = FilterChipDefaults.filterChipColors(
-                        containerColor = ParchmentSurface,
-                        labelColor = MaterialTheme.colorScheme.onSurface
-                    ),
-                    border = FilterChipDefaults.filterChipBorder(
-                        enabled = true,
-                        selected = false,
-                        borderColor = ParchmentBorder
-                    )
+                    modifier = Modifier.weight(1f)
                 )
 
-                FilterChip(
-                    selected = false,
+                // Tab 3: Downloads
+                LibraryNavTab(
+                    label = strings.tabDownloads,
+                    icon = Icons.Default.DownloadDone,
+                    isSelected = false,
                     onClick = onDownloadsClick,
-                    label = { Text(strings.offlineDownloads) },
-                    leadingIcon = {
-                        Icon(
-                            imageVector = Icons.Default.DownloadDone,
-                            contentDescription = null,
-                            modifier = Modifier.size(16.dp),
-                            tint = TerracottaPrimary
-                        )
-                    },
-                    colors = FilterChipDefaults.filterChipColors(
-                        containerColor = ParchmentSurface,
-                        labelColor = MaterialTheme.colorScheme.onSurface
-                    ),
-                    border = FilterChipDefaults.filterChipBorder(
-                        enabled = true,
-                        selected = false,
-                        borderColor = ParchmentBorder
-                    )
+                    modifier = Modifier.weight(1f)
                 )
             }
 
@@ -212,7 +183,13 @@ fun LibraryScreen(
             OutlinedTextField(
                 value = state.searchQuery,
                 onValueChange = { viewModel.onSearchQueryChanged(it) },
-                placeholder = { Text(strings.searchPlaceholder, fontSize = 14.sp) },
+                placeholder = {
+                    Text(
+                        text = strings.searchPlaceholder,
+                        fontSize = 14.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
+                    )
+                },
                 leadingIcon = {
                     Icon(
                         imageVector = Icons.Default.Search,
@@ -237,10 +214,12 @@ fun LibraryScreen(
                     .padding(horizontal = 16.dp, vertical = 4.dp),
                 shape = RoundedCornerShape(12.dp),
                 colors = OutlinedTextFieldDefaults.colors(
-                    focusedContainerColor = ParchmentSurface,
-                    unfocusedContainerColor = ParchmentSurface,
+                    focusedContainerColor = MaterialTheme.colorScheme.surface,
+                    unfocusedContainerColor = MaterialTheme.colorScheme.surface,
                     focusedBorderColor = TerracottaPrimary,
-                    unfocusedBorderColor = ParchmentBorder,
+                    unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
+                    focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                    unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
                     cursorColor = TerracottaPrimary
                 )
             )
@@ -289,10 +268,12 @@ fun LibraryScreen(
                                     val continueBook = state.continueReadingBook!!
                                     val continueProgress = state.continueReadingProgress!!
 
+                                    val isDownloaded = continueBook.id in state.downloadedBookIds
                                     ContinueReadingCard(
                                         book = continueBook,
                                         progress = continueProgress,
                                         strings = strings,
+                                        isDownloaded = isDownloaded,
                                         onClick = { onReadClick(continueBook.id) },
                                         modifier = Modifier.padding(bottom = 6.dp)
                                     )
@@ -330,6 +311,75 @@ fun LibraryScreen(
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun LibraryNavTab(
+    label: String,
+    icon: ImageVector,
+    isSelected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val backgroundColor = if (isSelected) {
+        TerracottaPrimary
+    } else {
+        MaterialTheme.colorScheme.surface
+    }
+
+    val contentColor = if (isSelected) {
+        Color.White
+    } else {
+        MaterialTheme.colorScheme.onSurface
+    }
+
+    val iconColor = if (isSelected) {
+        Color.White
+    } else {
+        TerracottaPrimary
+    }
+
+    val borderColor = if (isSelected) {
+        TerracottaDark
+    } else {
+        MaterialTheme.colorScheme.outlineVariant
+    }
+
+    Surface(
+        onClick = onClick,
+        modifier = modifier.height(44.dp),
+        shape = RoundedCornerShape(12.dp),
+        color = backgroundColor,
+        tonalElevation = if (isSelected) 2.dp else 0.dp,
+        shadowElevation = if (isSelected) 2.dp else 0.dp,
+        border = androidx.compose.foundation.BorderStroke(1.dp, borderColor)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                modifier = Modifier.size(17.dp),
+                tint = iconColor
+            )
+            Spacer(modifier = Modifier.width(6.dp))
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.SemiBold,
+                color = contentColor,
+                fontSize = 12.5.sp,
+                maxLines = 1,
+                softWrap = false,
+                overflow = TextOverflow.Ellipsis
+            )
         }
     }
 }

@@ -175,7 +175,7 @@ fun SeriesDetailScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-                .background(ParchmentBackground)
+                .background(MaterialTheme.colorScheme.background)
         ) {
             when {
                 isLoading -> {
@@ -202,9 +202,12 @@ fun SeriesDetailScreen(
                             Card(
                                 modifier = Modifier.fillMaxWidth(),
                                 shape = RoundedCornerShape(18.dp),
-                                colors = CardDefaults.cardColors(containerColor = ParchmentSurface),
+                                colors = CardDefaults.cardColors(
+                                    containerColor = MaterialTheme.colorScheme.surface,
+                                    contentColor = MaterialTheme.colorScheme.onSurface
+                                ),
                                 elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-                                border = androidx.compose.foundation.BorderStroke(1.dp, MutedGold.copy(alpha = 0.4f))
+                                border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
                             ) {
                                 Column(modifier = Modifier.padding(20.dp)) {
                                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -375,9 +378,12 @@ fun SeriesDetailScreen(
                                         }
                                     },
                                 shape = RoundedCornerShape(14.dp),
-                                colors = CardDefaults.cardColors(containerColor = ParchmentSurface),
+                                colors = CardDefaults.cardColors(
+                                    containerColor = MaterialTheme.colorScheme.surface,
+                                    contentColor = MaterialTheme.colorScheme.onSurface
+                                ),
                                 elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-                                border = androidx.compose.foundation.BorderStroke(0.8.dp, ParchmentBorder)
+                                border = androidx.compose.foundation.BorderStroke(0.8.dp, MaterialTheme.colorScheme.outlineVariant)
                             ) {
                                 Row(
                                     modifier = Modifier

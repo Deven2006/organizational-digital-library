@@ -18,6 +18,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.AutoStories
 import androidx.compose.material.icons.filled.Bookmark
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -42,10 +43,14 @@ import com.example.digitallibrary.data.model.ReadingProgress
 import com.example.digitallibrary.ui.common.AppLanguage
 import com.example.digitallibrary.ui.common.LibraryStrings
 import com.example.digitallibrary.ui.theme.DeepMaroon
+import com.example.digitallibrary.ui.theme.FormatDocxColor
+import com.example.digitallibrary.ui.theme.FormatPdfColor
+import com.example.digitallibrary.ui.theme.FormatTxtColor
 import com.example.digitallibrary.ui.theme.MutedGold
 import com.example.digitallibrary.ui.theme.MutedGoldLight
 import com.example.digitallibrary.ui.theme.ParchmentBorder
 import com.example.digitallibrary.ui.theme.ParchmentSurface
+import com.example.digitallibrary.ui.theme.SuccessGreen
 import com.example.digitallibrary.ui.theme.TerracottaDark
 import com.example.digitallibrary.ui.theme.TerracottaPrimary
 
@@ -55,7 +60,8 @@ fun ContinueReadingCard(
     progress: ReadingProgress,
     strings: LibraryStrings,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    isDownloaded: Boolean = false
 ) {
     Card(
         modifier = modifier
@@ -63,10 +69,11 @@ fun ContinueReadingCard(
             .clickable(onClick = onClick),
         shape = RoundedCornerShape(18.dp),
         colors = CardDefaults.cardColors(
-            containerColor = ParchmentSurface
+            containerColor = MaterialTheme.colorScheme.surface,
+            contentColor = MaterialTheme.colorScheme.onSurface
         ),
         elevation = CardDefaults.cardElevation(defaultElevation = 3.dp),
-        border = androidx.compose.foundation.BorderStroke(1.dp, MutedGold.copy(alpha = 0.45f))
+        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
     ) {
         Column(
             modifier = Modifier
@@ -150,7 +157,7 @@ fun ContinueReadingCard(
                         color = MaterialTheme.colorScheme.onSurface
                     )
 
-                    Spacer(modifier = Modifier.height(4.dp))
+                    Spacer(modifier = Modifier.height(3.dp))
 
                     Text(
                         text = book.author ?: strings.unknownAuthor,
@@ -160,13 +167,91 @@ fun ContinueReadingCard(
                         overflow = TextOverflow.Ellipsis
                     )
 
+                    Spacer(modifier = Modifier.height(6.dp))
+
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        val badgeColor = when {
+                            book.isPdf -> FormatPdfColor
+                            book.isDocx -> FormatDocxColor
+                            book.isTxt -> FormatTxtColor
+                            else -> TerracottaPrimary
+                        }
+
+                        // Compact Format Tag
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(4.dp))
+                                .background(badgeColor.copy(alpha = 0.12f))
+                                .border(0.5.dp, badgeColor.copy(alpha = 0.35f), RoundedCornerShape(4.dp))
+                                .padding(horizontal = 6.dp, vertical = 2.dp)
+                        ) {
+                            Text(
+                                text = book.fileType.uppercase(),
+                                color = badgeColor,
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold,
+                                maxLines = 1
+                            )
+                        }
+
+                        // Series Volume Tag
+                        if (book.seriesId != null && book.seriesOrder > 0) {
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(4.dp))
+                                    .background(MutedGold.copy(alpha = 0.15f))
+                                    .border(0.5.dp, MutedGold.copy(alpha = 0.4f), RoundedCornerShape(4.dp))
+                                    .padding(horizontal = 6.dp, vertical = 2.dp)
+                            ) {
+                                Text(
+                                    text = "${strings.seriesVol} ${book.seriesOrder}",
+                                    color = TerracottaDark,
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    maxLines = 1
+                                )
+                            }
+                        }
+
+                        // Offline Status Indicator
+                        if (isDownloaded) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(4.dp))
+                                    .background(SuccessGreen.copy(alpha = 0.1f))
+                                    .padding(horizontal = 5.dp, vertical = 2.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.CheckCircle,
+                                    contentDescription = "Offline Available",
+                                    tint = SuccessGreen,
+                                    modifier = Modifier.size(11.dp)
+                                )
+                                Spacer(modifier = Modifier.width(3.dp))
+                                Text(
+                                    text = "Offline",
+                                    color = SuccessGreen,
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    maxLines = 1
+                                )
+                            }
+                        }
+                    }
+
                     if (progress.lastPage > 0) {
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
                             text = "${strings.lastReadPage}: ${progress.lastPage + 1}",
                             style = MaterialTheme.typography.labelSmall,
                             color = TerracottaPrimary,
-                            fontWeight = FontWeight.SemiBold
+                            fontWeight = FontWeight.SemiBold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
                     }
                 }

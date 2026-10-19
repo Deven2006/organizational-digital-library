@@ -48,16 +48,34 @@ class LibraryStrings(private val lang: AppLanguage) {
             AppLanguage.ENGLISH -> "All Books"
         }
 
+    val tabAllBooks: String
+        get() = when (lang) {
+            AppLanguage.MARATHI -> "सर्व ग्रंथ"
+            AppLanguage.ENGLISH -> "All Books"
+        }
+
     val seriesCollections: String
         get() = when (lang) {
             AppLanguage.MARATHI -> "ग्रंथ मालिका"
             AppLanguage.ENGLISH -> "Series Collections"
         }
 
+    val tabSeries: String
+        get() = when (lang) {
+            AppLanguage.MARATHI -> "मालिका"
+            AppLanguage.ENGLISH -> "Series"
+        }
+
     val offlineDownloads: String
         get() = when (lang) {
             AppLanguage.MARATHI -> "ऑफलाइन ग्रंथ"
             AppLanguage.ENGLISH -> "Offline Downloads"
+        }
+
+    val tabDownloads: String
+        get() = when (lang) {
+            AppLanguage.MARATHI -> "डाउनलोड्स"
+            AppLanguage.ENGLISH -> "Downloads"
         }
 
     val searchPlaceholder: String

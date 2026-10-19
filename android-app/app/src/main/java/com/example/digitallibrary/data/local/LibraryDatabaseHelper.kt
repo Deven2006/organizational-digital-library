@@ -159,12 +159,37 @@ class LibraryDatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABA
 
     fun deleteDownloadedBook(bookId: String): Boolean {
         val db = writableDatabase
-        // Delete physical file from disk first
-        val existing = getDownloadedBook(bookId)
-        if (existing != null && existing.existsOnDisk) {
-            existing.file.delete()
+        // 1. Direct query for local_file_path so file is deleted even if model checks had issues
+        val cursor = db.query(
+            TABLE_DOWNLOADED_BOOKS,
+            arrayOf("local_file_path"),
+            "book_id = ?",
+            arrayOf(bookId),
+            null,
+            null,
+            null
+        )
+        var filePath: String? = null
+        cursor.use {
+            if (it.moveToNext()) {
+                filePath = it.getString(0)
+            }
         }
+        if (!filePath.isNullOrBlank()) {
+            try {
+                val f = File(filePath)
+                if (f.exists()) {
+                    f.delete()
+                }
+            } catch (e: Exception) {
+                // Ignore failure on already removed or missing file
+            }
+        }
+
+        // 2. Remove downloaded metadata
         val rows = db.delete(TABLE_DOWNLOADED_BOOKS, "book_id = ?", arrayOf(bookId))
+        // 3. Purge cached book entry to remove stale references
+        db.delete(TABLE_CACHED_BOOKS, "book_id = ?", arrayOf(bookId))
         return rows > 0
     }
 

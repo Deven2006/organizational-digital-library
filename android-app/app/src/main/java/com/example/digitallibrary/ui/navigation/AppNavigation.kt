@@ -52,6 +52,14 @@ fun AppNavigation() {
     val navController = rememberNavController()
     val isLoggedIn by authRepository.isLoggedIn.collectAsState()
 
+    androidx.compose.runtime.LaunchedEffect(isLoggedIn) {
+        if (!isLoggedIn && navController.currentDestination?.route != Screen.Login.route) {
+            navController.navigate(Screen.Login.route) {
+                popUpTo(0) { inclusive = true }
+            }
+        }
+    }
+
     val startDestination = if (isLoggedIn) Screen.Library.route else Screen.Login.route
 
     NavHost(

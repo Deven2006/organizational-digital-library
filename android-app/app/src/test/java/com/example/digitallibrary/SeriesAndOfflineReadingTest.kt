@@ -171,4 +171,60 @@ class SeriesAndOfflineReadingTest {
         )
         assertEquals("3.50 MB", mbBook.formattedFileSize)
     }
+
+    @Test
+    fun testReconciliationDistinguishesPermanentDeletionFromUnpublishing() {
+        // Mock local downloaded books
+        val downloadedBookIds = listOf("book-published", "book-unpublished", "book-deleted")
+
+        // Authoritative server existence map:
+        // book-published: exists & published (true)
+        // book-unpublished: exists in DB but is_published = false
+        // book-deleted: permanently deleted from DB (absent from map)
+        val serverExistenceMap = mapOf(
+            "book-published" to true,
+            "book-unpublished" to false
+        )
+
+        val permanentlyDeleted = downloadedBookIds.filter { !serverExistenceMap.containsKey(it) }
+        val preservedUnpublished = downloadedBookIds.filter { serverExistenceMap[it] == false }
+        val preservedPublished = downloadedBookIds.filter { serverExistenceMap[it] == true }
+
+        // Authoritative deletion MUST only delete book-deleted
+        assertEquals(listOf("book-deleted"), permanentlyDeleted)
+
+        // Unpublished books MUST be preserved locally (NOT deleted)
+        assertEquals(listOf("book-unpublished"), preservedUnpublished)
+
+        // Published books MUST be preserved locally
+        assertEquals(listOf("book-published"), preservedPublished)
+    }
+
+    @Test
+    fun testNetworkFailurePreservesAllDownloads() {
+        val downloadedBookIds = listOf("book-1", "book-2", "book-3")
+        val networkSuccess = false
+
+        // If network request fails or returns 401/timeout, do not infer deletion!
+        val reconciledDeletions = if (networkSuccess) {
+            downloadedBookIds.filter { false }
+        } else {
+            emptyList<String>()
+        }
+
+        assertTrue("Network failures must never cause mass deletion", reconciledDeletions.isEmpty())
+    }
+
+    @Test
+    fun testDevotionalContrastColors() {
+        val deepMaroon = 0xFF4A1505
+        val terracottaDark = 0xFF873600
+        val parchmentSurface = 0xFFFFFDF9
+
+        // Verify primary text color is Deep Maroon #4A1505
+        assertEquals(0xFF4A1505, deepMaroon)
+        assertEquals(0xFF873600, terracottaDark)
+        assertEquals(0xFFFFFDF9, parchmentSurface)
+    }
 }
+

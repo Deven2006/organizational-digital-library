@@ -36,9 +36,9 @@ val ParchmentDivider = Color(0xFFE6DCCE)
 val ParchmentBorder = Color(0xFFDFD1BF)
 
 // High-Contrast Devotional Text Colors (Light Mode)
-val TextDevotionalPrimary = Color(0xFF2C1810) // Deep warm espresso
-val TextDevotionalSecondary = Color(0xFF6E5848) // Warm earthy gray
-val TextDevotionalTertiary = Color(0xFF9E8777) // Soft warm muted
+val TextDevotionalPrimary = Color(0xFF4A1505) // Deep maroon #4A1505
+val TextDevotionalSecondary = Color(0xFF6B5145) // Readable dark brown #6B5145
+val TextDevotionalTertiary = Color(0xFF8E7365) // Soft warm muted brown
 
 // Sanctum Night Surfaces (Dark Mode)
 val SanctumBackgroundDark = Color(0xFF16100B)

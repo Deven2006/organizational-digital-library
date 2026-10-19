@@ -94,7 +94,7 @@ fun ProfileScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-                .background(ParchmentBackground)
+                .background(MaterialTheme.colorScheme.background)
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 20.dp, vertical = 16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
@@ -158,9 +158,12 @@ fun ProfileScreen(
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = ParchmentSurface),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    contentColor = MaterialTheme.colorScheme.onSurface
+                ),
                 elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-                border = androidx.compose.foundation.BorderStroke(0.8.dp, ParchmentBorder)
+                border = androidx.compose.foundation.BorderStroke(0.8.dp, MaterialTheme.colorScheme.outlineVariant)
             ) {
                 Column(modifier = Modifier.padding(18.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -195,7 +198,7 @@ fun ProfileScreen(
                                 .background(if (isEnglish) TerracottaPrimary.copy(alpha = 0.15f) else Color.Transparent)
                                 .border(
                                     width = if (isEnglish) 1.5.dp else 1.dp,
-                                    color = if (isEnglish) TerracottaPrimary else ParchmentBorder,
+                                    color = if (isEnglish) TerracottaPrimary else MaterialTheme.colorScheme.outlineVariant,
                                     shape = RoundedCornerShape(12.dp)
                                 )
                                 .clickable { LanguageManager.setLanguage(context, AppLanguage.ENGLISH) }
@@ -229,7 +232,7 @@ fun ProfileScreen(
                                 .background(if (isMarathi) TerracottaPrimary.copy(alpha = 0.15f) else Color.Transparent)
                                 .border(
                                     width = if (isMarathi) 1.5.dp else 1.dp,
-                                    color = if (isMarathi) TerracottaPrimary else ParchmentBorder,
+                                    color = if (isMarathi) TerracottaPrimary else MaterialTheme.colorScheme.outlineVariant,
                                     shape = RoundedCornerShape(12.dp)
                                 )
                                 .clickable { LanguageManager.setLanguage(context, AppLanguage.MARATHI) }
@@ -263,9 +266,12 @@ fun ProfileScreen(
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = ParchmentSurface),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    contentColor = MaterialTheme.colorScheme.onSurface
+                ),
                 elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-                border = androidx.compose.foundation.BorderStroke(0.8.dp, ParchmentBorder)
+                border = androidx.compose.foundation.BorderStroke(0.8.dp, MaterialTheme.colorScheme.outlineVariant)
             ) {
                 Column(modifier = Modifier.padding(18.dp)) {
                     Text(

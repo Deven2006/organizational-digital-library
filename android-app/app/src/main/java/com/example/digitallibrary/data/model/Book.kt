@@ -51,3 +51,12 @@ data class Book(
     val isDocx: Boolean get() = fileType.equals("docx", ignoreCase = true)
     val isTxt: Boolean get() = fileType.equals("txt", ignoreCase = true)
 }
+
+@Serializable
+data class BookExistence(
+    @SerialName("id")
+    val id: String,
+
+    @SerialName("is_published")
+    val isPublished: Boolean = false
+)

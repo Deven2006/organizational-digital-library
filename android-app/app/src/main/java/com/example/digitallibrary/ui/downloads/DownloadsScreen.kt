@@ -98,6 +98,8 @@ fun DownloadsScreen(
             val remoteResult = bookRepository.getPublishedBooks()
             if (remoteResult.isSuccess) {
                 downloadedBooks = downloadManager.checkForUpdates(remoteResult.getOrThrow())
+            } else {
+                refreshDownloads()
             }
             isCheckingUpdates = false
         }
@@ -116,7 +118,7 @@ fun DownloadsScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-                .background(ParchmentBackground)
+                .background(MaterialTheme.colorScheme.background)
         ) {
             if (downloadedBooks.isEmpty()) {
                 DevotionalEmptyView(
@@ -143,9 +145,12 @@ fun DownloadsScreen(
                         Card(
                             modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(16.dp),
-                            colors = CardDefaults.cardColors(containerColor = ParchmentSurface),
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.surface,
+                                contentColor = MaterialTheme.colorScheme.onSurface
+                            ),
                             elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-                            border = androidx.compose.foundation.BorderStroke(0.8.dp, ParchmentBorder)
+                            border = androidx.compose.foundation.BorderStroke(0.8.dp, MaterialTheme.colorScheme.outlineVariant)
                         ) {
                             Column(modifier = Modifier.padding(16.dp)) {
                                 Row(
@@ -196,7 +201,8 @@ fun DownloadsScreen(
                                                 text = downloadedBook.fileType.uppercase(),
                                                 color = badgeColor,
                                                 fontSize = 10.sp,
-                                                fontWeight = FontWeight.Bold
+                                                fontWeight = FontWeight.Bold,
+                                                maxLines = 1
                                             )
                                         }
                                     }

@@ -65,10 +65,11 @@ fun DevotionalBookItem(
             .clickable(onClick = onClick),
         shape = RoundedCornerShape(14.dp),
         colors = CardDefaults.cardColors(
-            containerColor = ParchmentSurface
+            containerColor = MaterialTheme.colorScheme.surface,
+            contentColor = MaterialTheme.colorScheme.onSurface
         ),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-        border = androidx.compose.foundation.BorderStroke(0.8.dp, ParchmentBorder)
+        border = androidx.compose.foundation.BorderStroke(0.8.dp, MaterialTheme.colorScheme.outlineVariant)
     ) {
         Row(
             modifier = Modifier
@@ -129,7 +130,8 @@ fun DevotionalBookItem(
                             text = book.fileType.uppercase(),
                             color = badgeColor,
                             fontSize = 10.sp,
-                            fontWeight = FontWeight.Bold
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 1
                         )
                     }
 
@@ -146,7 +148,8 @@ fun DevotionalBookItem(
                                 text = "${strings.seriesVol} ${book.seriesOrder}",
                                 color = TerracottaDark,
                                 fontSize = 10.sp,
-                                fontWeight = FontWeight.Bold
+                                fontWeight = FontWeight.Bold,
+                                maxLines = 1
                             )
                         }
                     }
@@ -171,7 +174,8 @@ fun DevotionalBookItem(
                                 text = "Offline",
                                 color = SuccessGreen,
                                 fontSize = 10.sp,
-                                fontWeight = FontWeight.SemiBold
+                                fontWeight = FontWeight.SemiBold,
+                                maxLines = 1
                             )
                         }
                     }

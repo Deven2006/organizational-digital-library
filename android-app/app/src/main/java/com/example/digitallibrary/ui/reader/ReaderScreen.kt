@@ -49,6 +49,7 @@ import com.example.digitallibrary.ui.common.LibraryStrings
 import com.example.digitallibrary.ui.components.DevotionalErrorView
 import com.example.digitallibrary.ui.components.DevotionalLoadingView
 import com.example.digitallibrary.ui.components.DevotionalTopBar
+import com.example.digitallibrary.ui.theme.DeepMaroon
 import com.example.digitallibrary.ui.theme.MutedGold
 import com.example.digitallibrary.ui.theme.ParchmentBackground
 import com.example.digitallibrary.ui.theme.ParchmentBorder
@@ -56,6 +57,8 @@ import com.example.digitallibrary.ui.theme.ParchmentSurface
 import com.example.digitallibrary.ui.theme.SuccessGreen
 import com.example.digitallibrary.ui.theme.TerracottaDark
 import com.example.digitallibrary.ui.theme.TerracottaPrimary
+import com.example.digitallibrary.ui.theme.TextDevotionalPrimary
+import com.example.digitallibrary.ui.theme.TextDevotionalSecondary
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -109,15 +112,32 @@ fun ReaderScreen(
                         if (currentBook != null && !currentBook.parsedContent.isNullOrBlank()) {
                             textContent = currentBook.parsedContent
                         } else {
-                            withContext(Dispatchers.IO) {
-                                textContent = localPersistentFile.readText()
+                            val cached = bookRepository.getBookById(bookId).getOrNull()
+                            if (!cached?.parsedContent.isNullOrBlank()) {
+                                textContent = cached.parsedContent
+                            } else {
+                                withContext(Dispatchers.IO) {
+                                    try {
+                                        textContent = localPersistentFile.readText(Charsets.UTF_8)
+                                    } catch (e: Exception) {
+                                        textContent = "Unable to read document content."
+                                    }
+                                }
                             }
                         }
                     }
 
                     else -> {
-                        withContext(Dispatchers.IO) {
-                            textContent = localPersistentFile.readText()
+                        if (currentBook != null && !currentBook.parsedContent.isNullOrBlank()) {
+                            textContent = currentBook.parsedContent
+                        } else {
+                            withContext(Dispatchers.IO) {
+                                try {
+                                    textContent = localPersistentFile.readText(Charsets.UTF_8)
+                                } catch (e: Exception) {
+                                    textContent = "Unable to read text document."
+                                }
+                            }
                         }
                     }
                 }
@@ -289,7 +309,10 @@ fun ReaderScreen(
                         Card(
                             modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(16.dp),
-                            colors = CardDefaults.cardColors(containerColor = ParchmentSurface),
+                            colors = CardDefaults.cardColors(
+                                containerColor = ParchmentSurface,
+                                contentColor = TextDevotionalPrimary
+                            ),
                             elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
                             border = androidx.compose.foundation.BorderStroke(1.dp, MutedGold.copy(alpha = 0.35f))
                         ) {
@@ -299,7 +322,7 @@ fun ReaderScreen(
                                     style = MaterialTheme.typography.headlineMedium,
                                     fontFamily = FontFamily.Serif,
                                     fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.onSurface
+                                    color = TextDevotionalPrimary
                                 )
 
                                 if (!book?.author.isNullOrBlank()) {
@@ -308,7 +331,7 @@ fun ReaderScreen(
                                         text = "${book?.author}",
                                         style = MaterialTheme.typography.bodyMedium,
                                         color = TerracottaDark,
-                                        fontWeight = FontWeight.Medium
+                                        fontWeight = FontWeight.SemiBold
                                     )
                                 }
 
@@ -319,20 +342,74 @@ fun ReaderScreen(
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .height(1.dp)
-                                        .background(MutedGold.copy(alpha = 0.4f))
+                                        .background(MutedGold.copy(alpha = 0.45f))
                                 )
 
                                 Spacer(modifier = Modifier.height(18.dp))
 
-                                // Scripture Reading Text
-                                Text(
-                                    text = textContent ?: "",
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    fontSize = 17.sp,
-                                    lineHeight = 28.sp,
-                                    letterSpacing = 0.2.sp,
-                                    color = MaterialTheme.colorScheme.onSurface
-                                )
+                                // Scripture Reading Text with high contrast and proper Devanagari matra line height
+                                val rawText = textContent ?: ""
+                                val paragraphs = remember(rawText) {
+                                    val split = rawText.split(Regex("(\r?\n){2,}"))
+                                        .map { it.trim() }
+                                        .filter { it.isNotEmpty() }
+                                    if (split.isEmpty() && rawText.isNotBlank()) {
+                                        rawText.split(Regex("\r?\n"))
+                                            .map { it.trim() }
+                                            .filter { it.isNotEmpty() }
+                                    } else {
+                                        split
+                                    }
+                                }
+
+                                if (paragraphs.isNotEmpty()) {
+                                    Column(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        verticalArrangement = Arrangement.spacedBy(14.dp)
+                                    ) {
+                                        paragraphs.forEach { paragraph ->
+                                            val isHeading = paragraph.length <= 60 && (
+                                                paragraph.startsWith("अध्याय") ||
+                                                paragraph.startsWith("भाग") ||
+                                                paragraph.startsWith("स्तोत्र") ||
+                                                paragraph.startsWith("प्रकरण") ||
+                                                paragraph.startsWith("Chapter") ||
+                                                paragraph.startsWith("Section") ||
+                                                (!paragraph.contains("।") && !paragraph.contains("."))
+                                            )
+
+                                            if (isHeading) {
+                                                Text(
+                                                    text = paragraph,
+                                                    style = MaterialTheme.typography.titleMedium,
+                                                    fontFamily = FontFamily.Serif,
+                                                    fontWeight = FontWeight.Bold,
+                                                    fontSize = 19.sp,
+                                                    lineHeight = 28.sp,
+                                                    color = DeepMaroon
+                                                )
+                                            } else {
+                                                Text(
+                                                    text = paragraph,
+                                                    style = MaterialTheme.typography.bodyLarge,
+                                                    fontSize = 18.sp,
+                                                    lineHeight = 32.sp,
+                                                    letterSpacing = 0.2.sp,
+                                                    color = TextDevotionalPrimary
+                                                )
+                                            }
+                                        }
+                                    }
+                                } else {
+                                    Text(
+                                        text = rawText,
+                                        style = MaterialTheme.typography.bodyLarge,
+                                        fontSize = 18.sp,
+                                        lineHeight = 32.sp,
+                                        letterSpacing = 0.2.sp,
+                                        color = TextDevotionalPrimary
+                                    )
+                                }
                             }
                         }
                         Spacer(modifier = Modifier.height(36.dp))

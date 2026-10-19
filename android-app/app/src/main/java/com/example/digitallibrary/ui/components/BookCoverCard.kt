@@ -168,11 +168,10 @@ fun BookCoverCard(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.SpaceBetween
                 ) {
-                    // Top Sacred Header / Seal
-                    Row(
+                    // Top Sacred Header
+                    Box(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
+                        contentAlignment = Alignment.Center
                     ) {
                         Text(
                             text = "।। ॐ ।।",
@@ -181,21 +180,6 @@ fun BookCoverCard(
                             fontWeight = FontWeight.Bold,
                             fontFamily = FontFamily.Serif
                         )
-
-                        // Format Seal
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(4.dp))
-                                .background(badgeColor.copy(alpha = 0.85f))
-                                .padding(horizontal = if (isLarge) 6.dp else 4.dp, vertical = 2.dp)
-                        ) {
-                            Text(
-                                text = fileType.uppercase(),
-                                color = Color.White,
-                                fontSize = if (isLarge) 9.sp else 8.sp,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
                     }
 
                     // Center Motif & Title

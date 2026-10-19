@@ -20,13 +20,13 @@ class BookRepository(
 
     /**
      * Retrieves all published books.
-     * Online: fetches from Supabase and updates local cache.
+     * Online: fetches from Supabase with valid session and updates local cache.
+     * Reconciles permanently deleted downloads upon successful sync.
      * Offline: falls back to locally cached books.
      */
     suspend fun getPublishedBooks(): Result<List<Book>> {
-        val token = authRepository.getAuthToken()
-        if (token == null) {
-            // Return cached books if offline or unauthenticated
+        var token = authRepository.getValidAuthToken() ?: authRepository.getAuthToken()
+        if (token.isNullOrBlank()) {
             val cached = dbHelper.getCachedBooks()
             return if (cached.isNotEmpty()) {
                 Result.success(cached)
@@ -35,13 +35,30 @@ class BookRepository(
             }
         }
 
-        val remoteResult = supabaseClient.getPublishedBooks(token)
+        var remoteResult = supabaseClient.getPublishedBooks(token)
+        // If HTTP 401, attempt token refresh and retry once
+        if (remoteResult.isFailure && remoteResult.exceptionOrNull()?.message?.contains("401") == true) {
+            val refreshResult = authRepository.refreshAuthToken()
+            if (refreshResult.isSuccess) {
+                token = refreshResult.getOrThrow()
+                remoteResult = supabaseClient.getPublishedBooks(token)
+            } else {
+                // Token refresh failed; session is expired/revoked on server. Clear dead session.
+                authRepository.logout()
+            }
+        }
+
         return if (remoteResult.isSuccess) {
             val books = remoteResult.getOrThrow()
             dbHelper.cacheBooks(books)
+            // Reconcile downloads after successful authoritative synchronization
+            try {
+                reconcileDownloads()
+            } catch (e: Exception) {
+                // Non-fatal: do not abort library load if reconciliation encounters a transient issue
+            }
             Result.success(books)
         } else {
-            // Network failure fallback to local cache
             val cached = dbHelper.getCachedBooks()
             if (cached.isNotEmpty()) {
                 Result.success(cached)
@@ -57,8 +74,8 @@ class BookRepository(
      * Offline: falls back to locally cached series.
      */
     suspend fun getPublishedSeries(): Result<List<Series>> {
-        val token = authRepository.getAuthToken()
-        if (token == null) {
+        var token = authRepository.getValidAuthToken() ?: authRepository.getAuthToken()
+        if (token.isNullOrBlank()) {
             val cached = dbHelper.getCachedSeries()
             return if (cached.isNotEmpty()) {
                 Result.success(cached)
@@ -67,7 +84,17 @@ class BookRepository(
             }
         }
 
-        val remoteResult = supabaseClient.getPublishedSeries(token)
+        var remoteResult = supabaseClient.getPublishedSeries(token)
+        if (remoteResult.isFailure && remoteResult.exceptionOrNull()?.message?.contains("401") == true) {
+            val refreshResult = authRepository.refreshAuthToken()
+            if (refreshResult.isSuccess) {
+                token = refreshResult.getOrThrow()
+                remoteResult = supabaseClient.getPublishedSeries(token)
+            } else {
+                authRepository.logout()
+            }
+        }
+
         return if (remoteResult.isSuccess) {
             val seriesList = remoteResult.getOrThrow()
             dbHelper.cacheSeries(seriesList)
@@ -84,18 +111,31 @@ class BookRepository(
 
     /**
      * Retrieves all books belonging to a series, ordered by series_order.
+     * Caches fetched series books locally for resilient offline access.
      */
     suspend fun getSeriesBooks(seriesId: String): Result<List<Book>> {
-        val token = authRepository.getAuthToken()
-        if (token == null) {
+        var token = authRepository.getValidAuthToken() ?: authRepository.getAuthToken()
+        if (token.isNullOrBlank()) {
             val cached = dbHelper.getCachedBooks().filter { it.seriesId == seriesId }
                 .sortedBy { it.seriesOrder }
             return Result.success(cached)
         }
 
-        val remoteResult = supabaseClient.getSeriesBooks(seriesId, token)
+        var remoteResult = supabaseClient.getSeriesBooks(seriesId, token)
+        if (remoteResult.isFailure && remoteResult.exceptionOrNull()?.message?.contains("401") == true) {
+            val refreshResult = authRepository.refreshAuthToken()
+            if (refreshResult.isSuccess) {
+                token = refreshResult.getOrThrow()
+                remoteResult = supabaseClient.getSeriesBooks(seriesId, token)
+            } else {
+                authRepository.logout()
+            }
+        }
+
         return if (remoteResult.isSuccess) {
-            remoteResult
+            val books = remoteResult.getOrThrow()
+            dbHelper.cacheBooks(books)
+            Result.success(books)
         } else {
             val cached = dbHelper.getCachedBooks().filter { it.seriesId == seriesId }
                 .sortedBy { it.seriesOrder }
@@ -105,6 +145,42 @@ class BookRepository(
                 remoteResult
             }
         }
+    }
+
+    /**
+     * Reconciles local downloads against authoritative server existence.
+     * Safely deletes local copies of permanently deleted server books.
+     * Never deletes on network error, HTTP 401/403, or unpublishing.
+     */
+    suspend fun reconcileDownloads(): Result<List<String>> {
+        val localDownloads = dbHelper.getDownloadedBooks()
+        if (localDownloads.isEmpty()) return Result.success(emptyList())
+
+        var token = authRepository.getValidAuthToken() ?: authRepository.getAuthToken()
+        if (token.isNullOrBlank()) {
+            return Result.failure(IllegalStateException("Cannot reconcile downloads while unauthenticated."))
+        }
+
+        val localIds = localDownloads.map { it.bookId }
+        var checkResult = supabaseClient.checkExistingBooks(localIds, token)
+        if (checkResult.isFailure && checkResult.exceptionOrNull()?.message?.contains("401") == true) {
+            val refreshResult = authRepository.refreshAuthToken()
+            if (refreshResult.isSuccess) {
+                token = refreshResult.getOrThrow()
+                checkResult = supabaseClient.checkExistingBooks(localIds, token)
+            } else {
+                authRepository.logout()
+            }
+        }
+
+        if (checkResult.isFailure) {
+            // Network failure or unauthenticated: preserve all downloads safely!
+            return Result.failure(checkResult.exceptionOrNull() ?: Exception("Failed to check book existence."))
+        }
+
+        val existingMap = checkResult.getOrThrow()
+        val deletedIds = downloadManager.reconcileAuthoritativeDeletions(existingMap)
+        return Result.success(deletedIds)
     }
 
     /**
@@ -136,13 +212,23 @@ class BookRepository(
         // 2. Check local cache
         val cached = dbHelper.getCachedBooks().find { it.id == bookId }
 
-        val token = authRepository.getAuthToken()
-        if (token == null) {
+        var token = authRepository.getValidAuthToken() ?: authRepository.getAuthToken()
+        if (token.isNullOrBlank()) {
             return if (cached != null) Result.success(cached)
             else Result.failure(IllegalStateException("User is not authenticated and book is not cached."))
         }
 
-        val remoteResult = supabaseClient.getBookById(bookId, token)
+        var remoteResult = supabaseClient.getBookById(bookId, token)
+        if (remoteResult.isFailure && remoteResult.exceptionOrNull()?.message?.contains("401") == true) {
+            val refreshResult = authRepository.refreshAuthToken()
+            if (refreshResult.isSuccess) {
+                token = refreshResult.getOrThrow()
+                remoteResult = supabaseClient.getBookById(bookId, token)
+            } else {
+                authRepository.logout()
+            }
+        }
+
         return if (remoteResult.isSuccess) {
             remoteResult
         } else {
@@ -162,8 +248,10 @@ class BookRepository(
      * Securely downloads a book document into local cache for reading if not already downloaded.
      */
     suspend fun downloadDocument(storagePath: String): Result<File> {
-        val token = authRepository.getAuthToken()
-            ?: return Result.failure(IllegalStateException("User is not authenticated."))
+        var token = authRepository.getValidAuthToken() ?: authRepository.getAuthToken()
+        if (token.isNullOrBlank()) {
+            return Result.failure(IllegalStateException("User is not authenticated."))
+        }
 
         val cacheFolder = File(context.cacheDir, "book_documents")
         if (!cacheFolder.exists()) {
@@ -175,6 +263,17 @@ class BookRepository(
             return Result.success(localFile)
         }
 
-        return supabaseClient.downloadBookFile(storagePath, token, localFile)
+        var downloadResult = supabaseClient.downloadBookFile(storagePath, token, localFile)
+        if (downloadResult.isFailure && downloadResult.exceptionOrNull()?.message?.contains("401") == true) {
+            val refreshResult = authRepository.refreshAuthToken()
+            if (refreshResult.isSuccess) {
+                token = refreshResult.getOrThrow()
+                downloadResult = supabaseClient.downloadBookFile(storagePath, token, localFile)
+            } else {
+                authRepository.logout()
+            }
+        }
+
+        return downloadResult
     }
 }

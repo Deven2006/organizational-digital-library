@@ -114,7 +114,7 @@ fun SeriesListScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-                .background(ParchmentBackground)
+                .background(MaterialTheme.colorScheme.background)
         ) {
             when {
                 isLoading && seriesList.isEmpty() -> {
@@ -150,9 +150,12 @@ fun SeriesListScreen(
                                     .fillMaxWidth()
                                     .clickable { onSeriesClick(s.id) },
                                 shape = RoundedCornerShape(14.dp),
-                                colors = CardDefaults.cardColors(containerColor = ParchmentSurface),
+                                colors = CardDefaults.cardColors(
+                                    containerColor = MaterialTheme.colorScheme.surface,
+                                    contentColor = MaterialTheme.colorScheme.onSurface
+                                ),
                                 elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-                                border = androidx.compose.foundation.BorderStroke(0.8.dp, ParchmentBorder)
+                                border = androidx.compose.foundation.BorderStroke(0.8.dp, MaterialTheme.colorScheme.outlineVariant)
                             ) {
                                 Row(
                                     modifier = Modifier

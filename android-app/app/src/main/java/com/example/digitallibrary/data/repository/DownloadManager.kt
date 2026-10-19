@@ -44,7 +44,7 @@ class DownloadManager(
      * Downloads an individual book to persistent local storage.
      */
     suspend fun downloadBook(book: Book): Result<DownloadedBook> = withContext(Dispatchers.IO) {
-        val token = authRepository.getAuthToken()
+        val token = authRepository.getValidAuthToken() ?: authRepository.getAuthToken()
             ?: return@withContext Result.failure(IllegalStateException("User is not authenticated. Please log in."))
 
         // 1. Storage safety check (require at least 25 MB usable space)
@@ -196,7 +196,32 @@ class DownloadManager(
         }
     }
 
+    /**
+     * Reconciles local downloads with authoritative server records.
+     * Permanently deleted books (absent from existingRemoteBookMap) are safely removed.
+     * Unpublished books (present with isPublished = false) are preserved.
+     * Repeated runs are completely idempotent.
+     */
+    fun reconcileAuthoritativeDeletions(existingRemoteBookMap: Map<String, Boolean>): List<String> {
+        val localBooks = dbHelper.getDownloadedBooks()
+        if (localBooks.isEmpty()) return emptyList()
+
+        val deletedIds = mutableListOf<String>()
+        for (local in localBooks) {
+            // If the book does NOT exist on the server at all, it was permanently deleted by an administrator
+            if (!existingRemoteBookMap.containsKey(local.bookId)) {
+                val removed = removeDownload(local.bookId)
+                if (removed) {
+                    deletedIds.add(local.bookId)
+                }
+            }
+            // If it exists but isPublished == false, it is unpublished, so local file is safely preserved
+        }
+        return deletedIds
+    }
+
     private fun updateBookState(bookId: String, state: DownloadState) {
         _downloadStates.value = _downloadStates.value + (bookId to state)
     }
 }
+

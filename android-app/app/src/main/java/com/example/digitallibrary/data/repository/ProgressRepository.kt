@@ -52,7 +52,8 @@ class ProgressRepository(
 
         // 2. Attempt remote sync in background
         scope.launch {
-            val token = authRepository.getAuthToken() ?: return@launch
+            val token = authRepository.getValidAuthToken() ?: authRepository.getAuthToken()
+            if (token.isNullOrBlank()) return@launch
             val result = supabaseClient.upsertReadingProgress(progress, token)
             if (result.isSuccess) {
                 dbHelper.markProgressSynced(bookId, userId)
@@ -83,8 +84,10 @@ class ProgressRepository(
     suspend fun syncWithRemote(): Result<Unit> = withContext(Dispatchers.IO) {
         val userId = authRepository.getUserId()
             ?: return@withContext Result.failure(IllegalStateException("User is not authenticated."))
-        val token = authRepository.getAuthToken()
-            ?: return@withContext Result.failure(IllegalStateException("No authentication token."))
+        val token = authRepository.getValidAuthToken() ?: authRepository.getAuthToken()
+        if (token.isNullOrBlank()) {
+            return@withContext Result.failure(IllegalStateException("No authentication token."))
+        }
 
         try {
             // 1. Push unsynced local changes to remote
